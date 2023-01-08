@@ -25,7 +25,7 @@ class s3Sink(BatchSink):
             key_properties=key_properties,
         )
 
-    max_size = 5
+    max_size = 10000
 
     def get_s3_path(self, path: str, folder_structure: str) -> str:
         """Function to process S3 path into correct format."""
