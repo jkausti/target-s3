@@ -37,7 +37,7 @@ class Targets3(Target):
             th.StringType,
             default="simple",
             required=True,
-            description="Determines the folder-structure. Alternatives are: 'simple' and 'date_hierarchy'.",
+            description="Determines the folder-structure. Alternatives are: 'simple', 'date_hierarchy' and 'both'.",
         ),
         th.Property(
             "filetype",

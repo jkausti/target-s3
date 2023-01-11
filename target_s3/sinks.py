@@ -25,12 +25,16 @@ class s3Sink(BatchSink):
             key_properties=key_properties,
         )
 
+        self._pq_writer: pq.ParquetWriter = None
+        self._pa_schema: pa.Schema = None
+
     max_size = 10000
 
-    def get_s3_path(self, path: str, folder_structure: str) -> str:
+    def get_s3_path(self) -> str:
         """Function to process S3 path into correct format."""
 
-        epoch = time.time()
+        path = self.config.get("path")
+        folder_structure = self.config.get("folder_structure")
 
         if path.startswith("s3://"):
             path = path[5:]
@@ -43,9 +47,9 @@ class s3Sink(BatchSink):
             pass
 
         if folder_structure == "simple":
-            s3_path = f"{path}/{self.stream_name}/{self.stream_name}_{epoch}.parquet"
+            s3_path = f"{path}/{self.stream_name}/{self.stream_name}.parquet"
         elif folder_structure == "date_hierarchy":
-            s3_path = f"{path}/{self.stream_name}/{NOW.year}/{NOW.month}/{NOW.day}/{self.stream_name}__{epoch}.parquet"
+            s3_path = f"{path}/{self.stream_name}/{NOW.year}/{NOW.month}/{NOW.day}/{self.stream_name}__{NOW.isoformat()}.parquet"
         else:
             raise ConfigValidationError(
                 'Invalid value for configuration key "folder_structure". Only values "simple" and "date_hierarchy" are supported.'
@@ -53,19 +57,48 @@ class s3Sink(BatchSink):
 
         return s3_path
 
-    def process_batch(self, context: dict) -> None:
-        """Process the batch."""
-
-        table = pa.Table.from_pylist(context["records"])
-
-        s3_path = self.get_s3_path(self.config.get("path"), self.config.get("folder_structure"))
+    @property
+    def pq_writer(self) -> pq.ParquetWriter:
+        """Initiates and returns the pyarrow ParquetWriter"""
 
         s3 = S3FileSystem(
             access_key=self.config.get("AWS_ACCESS_KEY_ID"),
             secret_key=self.config.get("AWS_SECRET_ACCESS_KEY"),
         )
 
-        # write table
-        pq.write_table(table=table, where=s3_path, filesystem=s3, compression="snappy")
+        if not self._pq_writer:
 
-        context["records"] = []
+            if not self.pa_schema:
+                raise ValueError("No schema set for writing.")
+
+            self._pq_writer = pq.ParquetWriter(
+                where=self.get_s3_path(),
+                filesystem=s3,
+                schema=self.pa_schema,
+            )
+
+        return self._pq_writer
+
+    @property
+    def pa_schema(self):
+        return self._pa_schema
+
+    @pa_schema.setter
+    def pa_schema(self, value):
+        """Setter for _pa_schema"""
+        self._pa_schema = value
+
+    def process_batch(self, context: dict) -> None:
+        """Process the batch."""
+
+        table = pa.Table.from_pylist(context["records"])
+        self.pa_schema = table.schema
+
+        writer = self.pq_writer
+        writer.write_table(table)
+
+    def clean_up(self) -> None:
+
+        writer = self.pq_writer
+        writer.close()
+        return super().clean_up()
