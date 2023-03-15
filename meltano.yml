@@ -21,3 +21,4 @@ plugins:
     - name: path
     - name: folder_structure
     - name: filetype
+    - name: aws_region
