@@ -46,6 +46,13 @@ class Targets3(Target):
             required=True,
             description="Specifies the filetype to store the data as. Only parquet supported atm. *REQUIRED*",
         ),
+        th.Property(
+            "aws_region",
+            th.StringType,
+            default=None,
+            required=False,
+            description="Specfies the region in which your S3 bucket exists.",
+        ),
     ).to_dict()
 
     default_sink_class = s3Sink
