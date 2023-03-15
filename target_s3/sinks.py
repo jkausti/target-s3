@@ -64,6 +64,7 @@ class s3Sink(BatchSink):
         s3 = S3FileSystem(
             access_key=self.config.get("AWS_ACCESS_KEY_ID"),
             secret_key=self.config.get("AWS_SECRET_ACCESS_KEY"),
+            region=self.config.get("aws_region"),
         )
 
         if not self._pq_writer:
