@@ -49,7 +49,8 @@ class s3Sink(BatchSink):
         if folder_structure == "simple":
             s3_path = f"{path}/{self.stream_name}/{self.stream_name}.parquet"
         elif folder_structure == "date_hierarchy":
-            s3_path = f"{path}/{self.stream_name}/{NOW.year}/{NOW.month}/{NOW.day}/{self.stream_name}__{NOW.isoformat()}.parquet"
+            s3_path = f"{path}/{self.stream_name}/{NOW.year}/{NOW.month}/" \
+                      f"{NOW.day}/{self.stream_name}__{NOW.timestamp()}.parquet"
         else:
             raise ConfigValidationError(
                 'Invalid value for configuration key "folder_structure". Only values "simple" and "date_hierarchy" are supported.'
